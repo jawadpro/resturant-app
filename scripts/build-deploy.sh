@@ -4,7 +4,7 @@
 #   --with-import  also include storage/app/import/*.json (client history; never commit these)
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-OUT="$ROOT/deploy"; STAGE="$OUT/stage"
+OUT="${OUT_DIR:-$ROOT/deploy}"; STAGE="$OUT/stage"
 rm -rf "$STAGE"; mkdir -p "$STAGE"
 rsync -a --exclude .git --exclude node_modules --exclude deploy --exclude tests --exclude .env \
   --exclude 'storage/logs/*.log' --exclude 'storage/framework/sessions/*' --exclude 'storage/framework/cache/data/*' \
