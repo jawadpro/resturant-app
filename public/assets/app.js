@@ -364,12 +364,12 @@ function vNight() {
   const d = NIGHTS[TODAY];
   if (d.status !== 'draft') {
     const c = dayCalc(d), done = d.status === 'closed';
-    return [T ? 'คืนนี้' : 'Tonight', longD(TODAY), `<section class="card"><div class="done"><span class="ok">${ic('check', 26)}</span><div><h2 style="font-size:20px">${done ? (T ? 'คืนนี้ร้านปิด' : 'Marked as closed tonight') : (T ? 'ส่งให้ผู้จัดการแล้ว' : `Sent to ${esc(MGR())}`)}</h2><p class="muted" style="margin:4px 0 0">${T ? 'ตอนนี้แก้ไขไม่ได้แล้ว' : `It’s locked now. If something is wrong, tell ${esc(MGR())}.`}</p></div></div></section>
+    return [T ? 'คืนนี้' : 'Tonight', longD(TODAY), `<section class="card"><div class="done"><span class="ok">${ic('check', 26)}</span><div><h2 style="font-size:20px">${done ? (T ? 'คืนนี้ร้านปิด' : 'Marked as closed tonight') : (T ? `ส่งให้ ${esc(MGR())} แล้ว` : `Sent to ${esc(MGR())}`)}</h2><p class="muted" style="margin:4px 0 0">${T ? 'ตอนนี้แก้ไขไม่ได้แล้ว' : `It’s locked now. If something is wrong, tell ${esc(MGR())}.`}</p></div></div></section>
       ${done ? '' : `<div class="kpis"><div class="card kpi"><div class="v tn">${fmt(c.sales)}</div><div class="l">${T ? 'ยอดขาย' : 'Sales'}</div></div><div class="card kpi"><div class="v tn">${fmt(c.pl)}</div><div class="l">${T ? 'จ่ายออก' : 'Paid out'}</div></div><div class="card kpi"><div class="v">${varPill(c)}</div><div class="l">${T ? 'นับเงินสด' : 'Cash count'}</div></div></div>`}`];
   }
   const started = d.by && d.by !== ME.name ? `<div class="banner b-warn">${T ? `${esc(d.by)} เริ่มกรอกไว้แล้ว คุณกรอกต่อได้` : `${esc(d.by)} started tonight’s form. You can carry on with it.`}</div>` : '';
   return [T ? 'ปิดยอดคืนนี้' : 'Close the night', `${longD(TODAY)} · ${T ? 'บันทึกอัตโนมัติขณะพิมพ์' : 'saves as you type'}`,
-    `<div class="banner b-info">${T ? `สวัสดี ${esc(ME.name)} กรอกขั้นตอน 1 ถึง 5 แล้วกดส่ง` : `Hi ${esc(ME.name)}. Fill in steps 1 to 5, then press <b>Send to ${esc(MGR())}</b>.`}</div>${started}${entryForm(TODAY)}${sumBar(TODAY, `<button class="btn" data-act="submit">${T ? 'ส่งให้ผู้จัดการ' : `Send to ${esc(MGR())}`}</button>`, true)}`];
+    `<div class="banner b-info">${T ? `สวัสดี ${esc(ME.name)} กรอกขั้นตอน 1 ถึง 5 แล้วกดส่ง` : `Hi ${esc(ME.name)}. Fill in steps 1 to 5, then press <b>Send to ${esc(MGR())}</b>.`}</div>${started}${entryForm(TODAY)}${sumBar(TODAY, `<button class="btn" data-act="submit">${T ? `ส่งให้ ${esc(MGR())}` : `Send to ${esc(MGR())}`}</button>`, true)}`];
 }
 function vMine() {
   const mine = Object.keys(NIGHTS).filter(k => NIGHTS[k].byId === ME.id && !NIGHTS[k]._new).sort().reverse();
@@ -518,7 +518,7 @@ document.addEventListener('click', e => {
       if (c.sales <= 0) return toast(th() ? 'ขั้นตอนที่ 1: ใส่ยอดขายอย่างน้อยหนึ่งรายการ' : 'Step 1: enter at least one sale.');
       if (d.float == null) { document.getElementById('f-float')?.focus(); return toast(th() ? 'ขั้นตอนที่ 4: ใส่เงินทอนตั้งต้น' : 'Step 4: enter the opening float.'); }
       if (d.counted == null || d.counted === '') { document.getElementById('f-counted')?.focus(); return toast(th() ? 'ขั้นตอนที่ 4: นับเงินสดก่อนส่ง' : 'Step 4: count the cash before sending.'); }
-      b.disabled = true; await saveNow(); const r = await api('POST', `/api/nights/${UI.date}/submit`); NIGHTS[UI.date] = r.night; toast(th() ? 'ส่งแล้ว' : `Sent to ${MGR()}`); window.scrollTo(0, 0); render();
+      b.disabled = true; await saveNow(); const r = await api('POST', `/api/nights/${UI.date}/submit`); NIGHTS[UI.date] = r.night; toast(th() ? `ส่งให้ ${MGR()} แล้ว` : `Sent to ${MGR()}`); window.scrollTo(0, 0); render();
     });
     case 'sendback': return act(async () => { await saveNow(); await api('POST', `/api/nights/${UI.date}/send-back`); toast('Sent back'); await reload(); });
     case 'approve': return act(async () => { await saveNow(); await api('POST', `/api/nights/${UI.date}/approve`); toast('Approved and locked'); await reload(); });

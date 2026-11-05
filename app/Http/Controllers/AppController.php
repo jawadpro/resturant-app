@@ -51,13 +51,32 @@ class AppController extends Controller
         return response()->json($out);
     }
 
+    /**
+     * Who approves the night, from the real logins: the active manager (or "the manager" if there
+     * are several); if nobody is a manager, the owner. The .env names are only a fallback.
+     */
+    private function people(): array
+    {
+        $active = User::where('active', true)->orderBy('id')->get(['name', 'role']);
+        $owners = $active->where('role', 'owner')->pluck('name')->values();
+        $managers = $active->where('role', 'manager')->pluck('name')->values();
+        $owner = $owners->count() === 1 ? $owners[0] : ($owners->count() > 1 ? 'the owner' : config('books.owner_name'));
+        $approver = match (true) {
+            $managers->count() === 1 => $managers[0],
+            $managers->count() > 1 => 'the manager',
+            default => $owner,
+        };
+        return [$owner, $approver];
+    }
+
     private function publicConfig(): array
     {
         $list = fn ($k) => collect(config("books.$k"))->map(fn ($v, $key) => ['k' => $key] + $v)->values();
+        try { [$owner, $approver] = $this->people(); } catch (\Throwable) { [$owner, $approver] = [config('books.owner_name'), config('books.manager_name')]; }
         return [
             'business' => config('books.business_name'),
-            'owner' => config('books.owner_name'),
-            'manager' => config('books.manager_name'),
+            'owner' => $owner,
+            'manager' => $approver,
             'income' => $list('income'),
             'expenses' => $list('expenses'),
             'paid' => config('books.paid_from'),
