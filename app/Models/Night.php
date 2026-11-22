@@ -13,7 +13,7 @@ class Night extends Model
     {
         return [
             'date' => 'date:Y-m-d',
-            'qr' => 'float', 'card' => 'float', 'banked' => 'float', 'opening_float' => 'float', 'counted' => 'float',
+            'qr' => 'float', 'card' => 'float', 'grab' => 'float', 'banked' => 'float', 'opening_float' => 'float', 'counted' => 'float',
             'submitted_at' => 'datetime', 'approved_at' => 'datetime',
         ];
     }
@@ -35,7 +35,7 @@ class Night extends Model
             'approvedBy' => $this->approved_by,
             'inc' => $this->sales->mapWithKeys(fn ($s) => [$s->category => (float) $s->amount])->all() ?: new \stdClass(),
             'exp' => $this->expenses->map(fn ($e) => $e->toApp())->values()->all(),
-            'qr' => $this->qr, 'card' => $this->card, 'banked' => $this->banked,
+            'qr' => $this->qr, 'card' => $this->card, 'grab' => $this->grab, 'banked' => $this->banked,
             'float' => $this->opening_float, 'counted' => $this->counted,
             'note' => $this->note ?? '',
             'submittedAt' => $this->submitted_at?->timezone($tz)->format('Y-m-d H:i'),

@@ -70,7 +70,7 @@ class NightController extends Controller
             'exp.*.paid' => ['required', Rule::in(array_keys(config('books.paid_from')))],
             'exp.*.note' => ['nullable', 'string', 'max:500'],
             'exp.*.auto' => ['nullable', 'boolean'],
-            'qr' => $money, 'card' => $money, 'banked' => $money, 'float' => $money, 'counted' => $money,
+            'qr' => $money, 'card' => $money, 'grab' => $money, 'banked' => $money, 'float' => $money, 'counted' => $money,
             'note' => ['nullable', 'string', 'max:2000'],
         ]);
         $incomeKeys = array_keys(config('books.income'));
@@ -80,7 +80,7 @@ class NightController extends Controller
                 $night = Night::create(['date' => $date, 'status' => 'draft', 'entered_by_id' => $u->id, 'entered_by' => $u->name]);
             }
             $night->fill([
-                'qr' => $data['qr'] ?? null, 'card' => $data['card'] ?? null, 'banked' => $data['banked'] ?? null,
+                'qr' => $data['qr'] ?? null, 'card' => $data['card'] ?? null, 'grab' => $data['grab'] ?? null, 'banked' => $data['banked'] ?? null,
                 'opening_float' => $data['float'] ?? null, 'counted' => $data['counted'] ?? null, 'note' => $data['note'] ?? null,
             ])->save();
 

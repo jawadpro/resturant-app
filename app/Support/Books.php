@@ -38,7 +38,7 @@ class Books
             if ($g === 'capital') $capex += $a; elseif ($g !== 'advance') $pl += $a;
             if ($e->paid_from === 'till') $till += $a;
         }
-        $cashSales = $sales - (float) $n->qr - (float) $n->card;
+        $cashSales = $sales - (float) $n->qr - (float) $n->card - (float) $n->grab;
         $expected = $n->opening_float === null ? null : (float) $n->opening_float + $cashSales - $till - (float) $n->banked;
         $variance = ($expected === null || $n->counted === null) ? null : (float) $n->counted - $expected;
         return compact('sales', 'pl', 'capex', 'till', 'cashSales', 'expected', 'variance') + ['net' => $sales - $pl];

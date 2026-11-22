@@ -19,7 +19,7 @@ class UserController extends Controller
 
     private function list()
     {
-        return User::orderByRaw("FIELD(role,'owner','manager','staff')")->orderBy('name')->get()->map->toPublic()->values();
+        return User::orderByRaw("CASE role WHEN 'owner' THEN 0 WHEN 'manager' THEN 1 ELSE 2 END")->orderBy('name')->get()->map->toPublic()->values();
     }
 
     public function store(Request $request)
@@ -27,11 +27,11 @@ class UserController extends Controller
         $request->merge(['username' => Str::lower(trim((string) $request->input('username')))]);
         $data = $request->validate([
             'name' => ['required', 'string', 'max:80'],
-            'username' => ['required', 'string', 'regex:/^[a-z0-9._-]{2,20}$/', Rule::unique('users', 'username')],
+            'username' => ['required', 'string', 'regex:/^[a-z0-9._-]{1,20}$/', Rule::unique('users', 'username')],
             'role' => ['required', Rule::in(User::ROLES)],
             'password' => ['required', 'string', 'min:8', 'max:200'],
         ], [
-            'username.regex' => 'Usernames use 2–20 letters or numbers, no spaces.',
+            'username.regex' => 'Usernames use 1–20 letters or numbers, no spaces.',
             'username.unique' => 'That username is taken. Try another.',
             'password.min' => 'Passwords need at least 8 characters.',
         ]);

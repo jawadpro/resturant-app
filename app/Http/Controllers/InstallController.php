@@ -49,7 +49,7 @@ class InstallController extends Controller
         $request->merge(['username' => Str::lower(trim((string) $request->input('username')))]);
         $data = $request->validate([
             'name' => ['required', 'string', 'max:80'],
-            'username' => ['required', 'regex:/^[a-z0-9._-]{2,20}$/'],
+            'username' => ['required', 'regex:/^[a-z0-9._-]{1,20}$/'],
             'password' => ['required', 'string', 'min:8', 'max:200', 'confirmed'],
         ]);
         $owner = User::firstOrCreate(['username' => $data['username']], ['name' => $data['name'], 'role' => 'owner', 'password' => $data['password'], 'active' => true]);

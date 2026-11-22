@@ -50,5 +50,6 @@ Route::middleware('installed')->group(function () {
         Route::post('/api/users/{user}/reset', [UserController::class, 'resetPassword']);
         Route::post('/api/users/{user}/toggle', [UserController::class, 'toggle']);
         Route::delete('/api/users/{user}', [UserController::class, 'destroy']);
+        Route::post('/api/system/update', [AppController::class, 'applyUpdates']);
     });
 });

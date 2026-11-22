@@ -3,7 +3,7 @@
 'use strict';
 
 /* ---------- state ---------- */
-let TODAY = '', FIRST = '', CFG = null, ME = null, NIGHTS = {}, PAY = null, ACT = [], USERS = [], LASTCOUNT = null;
+let TODAY = '', FIRST = '', CFG = null, ME = null, NIGHTS = {}, PAY = null, ACT = [], USERS = [], LASTCOUNT = null, PENDING = 0;
 let INC = [], EXP = [], EXPK = {}, INCK = {}, MONTHS = [];
 const UI = { lang: 'en', view: 'dash', month: '', date: '', rep: { type: 'daily', from: '', to: '' }, preview: null, loginMsg: '' };
 try { UI.lang = localStorage.getItem('mfd-lang') || 'en'; } catch (e) {}
@@ -49,7 +49,7 @@ async function api(method, url, body, form) {
 }
 async function load() {
   const b = await api('GET', '/api/bootstrap');
-  TODAY = b.today; CFG = b.config; ME = b.me; NIGHTS = b.nights || {}; PAY = b.payroll || null; ACT = b.activity || []; USERS = b.users || []; LASTCOUNT = b.lastCount ?? null;
+  TODAY = b.today; CFG = b.config; ME = b.me; NIGHTS = b.nights || {}; PAY = b.payroll || null; ACT = b.activity || []; USERS = b.users || []; LASTCOUNT = b.lastCount ?? null; PENDING = b.pendingUpdates || 0;
   FIRST = b.firstDate || TODAY;
   INC = CFG.income; EXP = CFG.expenses.map(c => ({ ...c, g: c.group })); EXPK = Object.fromEntries(EXP.map(c => [c.k, c])); INCK = Object.fromEntries(INC.map(c => [c.k, c]));
   MONTHS = []; { let [y, m] = FIRST.slice(0, 7).split('-').map(Number); const [ty, tm] = TODAY.slice(0, 7).split('-').map(Number); while (y < ty || (y === ty && m <= tm)) { MONTHS.push(`${y}-${String(m).padStart(2, '0')}`); m++; if (m > 12) { m = 1; y++; } } }
@@ -63,7 +63,7 @@ async function reload() { await load(); render(); }
 function dayCalc(d) {
   const sales = Object.values(d.inc || {}).reduce((a, b) => a + n0(b), 0); let pl = 0, capex = 0, till = 0;
   for (const l of d.exp || []) { const a = n0(l.amt), g = (EXPK[l.cat] || {}).g; if (g === 'capital') capex += a; else if (g !== 'advance') pl += a; if (l.paid === 'till') till += a; }
-  const cashSales = sales - n0(d.qr) - n0(d.card);
+  const cashSales = sales - n0(d.qr) - n0(d.card) - n0(d.grab);
   const expected = d.float == null ? null : n0(d.float) + cashSales - till - n0(d.banked);
   const variance = (expected == null || d.counted == null || d.counted === '') ? null : n0(d.counted) - expected;
   return { sales, pl, capex, till, cashSales, expected, variance, net: sales - pl };
@@ -90,13 +90,13 @@ function payCalc(r) {
   return { half, daily, absDed: n0(r.abs) * daily, gross, rent, elec, adv, carry: n0(r.rent) + n0(r.elec) + n0(r.adv) - rent - elec - adv, pay: left };
 }
 function newDay(date) {
-  return { date, inc: {}, qr: null, card: null, banked: null, float: date === TODAY ? LASTCOUNT : null, counted: null, status: 'draft', by: ME.name, note: '',
+  return { date, inc: {}, qr: null, card: null, grab: null, banked: null, float: date === TODAY ? LASTCOUNT : null, counted: null, status: 'draft', by: ME.name, note: '',
     exp: [{ id: uid(), cat: 'staffcomm', amt: null, note: '', paid: 'till', receipt: null, auto: true }], _new: true };
 }
 
 /* ---------- autosave ---------- */
 const SAVE = { timer: null, busy: false, again: false, state: 'saved', ver: 0, dirty: false };
-function payload(d) { return { inc: d.inc, exp: d.exp.map(l => ({ id: l.id, cat: l.cat, amt: l.amt, paid: l.paid, note: l.note, auto: !!l.auto })), qr: d.qr, card: d.card, banked: d.banked, float: d.float, counted: d.counted, note: d.note }; }
+function payload(d) { return { inc: d.inc, exp: d.exp.map(l => ({ id: l.id, cat: l.cat, amt: l.amt, paid: l.paid, note: l.note, auto: !!l.auto })), qr: d.qr, card: d.card, grab: d.grab, banked: d.banked, float: d.float, counted: d.counted, note: d.note }; }
 function setSaveState(s) { SAVE.state = s; const e = document.getElementById('savestate'); if (e) e.textContent = s === 'saving' ? (th() ? 'กำลังบันทึก…' : 'Saving…') : s === 'error' ? (th() ? 'บันทึกไม่สำเร็จ' : 'Not saved, retrying…') : (th() ? 'บันทึกแล้ว ✓' : 'Saved ✓'); }
 function queueSave() { SAVE.ver++; SAVE.dirty = true; setSaveState('saving'); clearTimeout(SAVE.timer); SAVE.timer = setTimeout(saveNow, 700); }
 async function saveNow() {
@@ -168,7 +168,7 @@ function render() {
     <div class="main">
       <div class="mtop"><div class="logo"><span class="m"><i></i><i></i><i></i><i></i></span>MFD Books</div><button class="btn sm ghost" data-act="mypw" aria-label="Change password">${ic('key', 16)}</button><button class="btn sm" data-act="logout">${th() ? 'ออก' : 'Sign out'}</button></div>
       <header class="top"><h1>${title}${sub ? `<span class="sub">${sub}</span>` : ''}</h1>${langSeg}<div class="me"><span class="av">${initials(ME.name)}</span><span class="nm">${esc(ME.name)}</span></div></header>
-      <main class="content">${body}</main></div></div></div>
+      <main class="content">${PENDING && ME.role === 'owner' ? `<div class="banner b-warn row between"><span><b>A database update is ready.</b> A new version of the app was uploaded. Apply it so everything works.</span><button class="btn sm pri" data-act="sysupdate">Apply update</button></div>` : ''}${body}</main></div></div></div>
     <nav class="bnav" aria-label="Sections">${items.map(([v, l, i]) => `<button data-act="go" data-v="${v}" ${cur(v) ? 'aria-current="page"' : ''}>${ic(i)}<span>${l}</span></button>`).join('')}</nav>`;
   if (UI.view === 'dash') drawCash();
   if (UI.view === 'reports') loadPreview();
@@ -327,9 +327,10 @@ function entryForm(date) {
   return `<div class="formgrid">
       <section class="card">${H(1, T ? 'ยอดขาย' : 'Sales', T ? 'ใส่ยอดรวมคืนนี้ของแต่ละประเภท' : 'Tonight’s total for each kind of sale.', `<b class="tn" id="o-sales">${fmt(c.sales)}</b>`)}${sales}</section>
       <div style="display:flex;flex-direction:column;gap:18px">
-      <section class="card">${H(2, T ? 'ลูกค้าจ่ายด้วย' : 'How customers paid', T ? 'ใส่เฉพาะ QR และบัตร ระบบคิดเงินสดให้' : 'Only QR and card. Cash is worked out for you.')}
+      <section class="card">${H(2, T ? 'ลูกค้าจ่ายด้วย' : 'How customers paid', T ? 'ใส่เฉพาะ QR บัตร และ Grab ระบบคิดเงินสดให้' : 'Only QR, card and Grab. Cash is worked out for you.')}
         <div class="fl"><label for="f-qr">QR / PromptPay</label>${mi('f-qr', d.qr, !ed, 'data-f="qr"')}</div>
         <div class="fl"><label for="f-card">${T ? 'บัตรเครดิต' : 'Card'}</label>${mi('f-card', d.card, !ed, 'data-f="card"')}</div>
+        <div class="fl"><label for="f-grab">Grab<small>${T ? 'ยอดที่ Grab จ่ายให้ร้าน' : 'Orders paid through the Grab app'}</small></label>${mi('f-grab', d.grab, !ed, 'data-f="grab"')}</div>
         <div class="calc"><span>${T ? 'ขายเงินสด' : 'Cash sales'}</span><b class="v" id="o-cs">${fmt(c.cashSales)}</b></div></section>
       <section class="card">${H(4, T ? 'นับเงินสด' : 'Count the cash', T ? 'นับเงินในลิ้นชักตอนปิดร้าน' : 'Count the drawer at closing. The app tells you if it’s short or over.')}
         <div class="fl"><label for="f-float">${T ? 'เงินทอนตั้งต้น' : 'Opening float'}<small>${T ? 'เงินทอนตอนเปิดร้าน' : 'Change in the till when you opened'}</small></label>${mi('f-float', d.float, !ed, 'data-f="float"')}</div>
@@ -504,6 +505,7 @@ document.addEventListener('click', e => {
     case 'showpw': { const p = document.getElementById('lp'); p.type = p.type === 'password' ? 'text' : 'password'; b.textContent = p.type === 'password' ? 'Show' : 'Hide'; return; }
     case 'logout': return act(async () => { await saveNow(); const r = await api('POST', '/logout'); setCsrf(r.csrf); ME = null; render(); });
     case 'mypw': return myPwModal();
+    case 'sysupdate': return act(async () => { b.disabled = true; b.textContent = 'Applying…'; await api('POST', '/api/system/update'); await reload(); toast('Update applied'); });
     case 'lang': UI.lang = v; try { localStorage.setItem('mfd-lang', v); } catch (x) {} break;
     case 'go': UI.view = v; if (v === 'night') UI.date = TODAY; window.scrollTo(0, 0); break;
     case 'month': UI.month = v; break;

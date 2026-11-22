@@ -8,6 +8,7 @@ use App\Models\PayrollPeriod;
 use App\Models\User;
 use App\Support\Books;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Artisan;
 
 class AppController extends Controller
 {
@@ -46,9 +47,33 @@ class AppController extends Controller
             $out['activity'] = Activity::latest('id')->limit(30)->get()->map->toApp()->values();
         }
         if ($user->isOwner()) {
-            $out['users'] = User::orderByRaw("FIELD(role,'owner','manager','staff')")->orderBy('name')->get()->map->toPublic()->values();
+            $out['pendingUpdates'] = count(self::pendingMigrations());
+            $out['users'] = User::orderByRaw("CASE role WHEN 'owner' THEN 0 WHEN 'manager' THEN 1 ELSE 2 END")->orderBy('name')->get()->map->toPublic()->values();
         }
         return response()->json($out);
+    }
+
+    /** Database changes shipped with the code but not yet applied. */
+    public static function pendingMigrations(): array
+    {
+        try {
+            $migrator = app('migrator');
+            if (! $migrator->repositoryExists()) return [];
+            $files = array_keys($migrator->getMigrationFiles(database_path('migrations')));
+            return array_values(array_diff($files, $migrator->getRepository()->getRan()));
+        } catch (\Throwable) {
+            return [];
+        }
+    }
+
+    /** Owner only: apply pending database changes after a new version is uploaded. */
+    public function applyUpdates(Request $request)
+    {
+        $pending = self::pendingMigrations();
+        if (! $pending) return response()->json(['ok' => true, 'applied' => 0]);
+        Artisan::call('migrate', ['--force' => true]);
+        Activity::log($request->user()->name, 'applied a database update');
+        return response()->json(['ok' => true, 'applied' => count($pending)]);
     }
 
     /**

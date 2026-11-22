@@ -55,12 +55,12 @@ class ReportController extends Controller
 
         switch ($type) {
             case 'daily':
-                $rows = [array_merge(['Date', 'Day', 'Status', 'Entered by', 'Approved by'], array_column($inc, 'en'), ['Total sales', 'QR / PromptPay', 'Card', 'Cash sales', 'Total costs', 'Profit', 'Cash counted', 'Till difference'])];
+                $rows = [array_merge(['Date', 'Day', 'Status', 'Entered by', 'Approved by'], array_column($inc, 'en'), ['Total sales', 'QR / PromptPay', 'Card', 'Grab', 'Cash sales', 'Total costs', 'Profit', 'Cash counted', 'Till difference'])];
                 foreach (Books::nights($from, $to) as $n) {
                     $c = Books::calc($n); $s = $n->sales->pluck('amount', 'category');
                     $rows[] = array_merge([$n->dateString(), $dow($n->date), self::STATUS[$n->status], $n->entered_by, $n->approved_by],
                         array_map(fn ($k) => $n2($s[$k] ?? 0), array_keys($inc)),
-                        [$n2($c['sales']), $n2($n->qr), $n2($n->card), $n2($c['cashSales']), $n2($c['pl']), $n2($c['net']), $n->counted === null ? '' : $n2($n->counted), $c['variance'] === null ? '' : $n2($c['variance'])]);
+                        [$n2($c['sales']), $n2($n->qr), $n2($n->card), $n2($n->grab), $n2($c['cashSales']), $n2($c['pl']), $n2($c['net']), $n->counted === null ? '' : $n2($n->counted), $c['variance'] === null ? '' : $n2($c['variance'])]);
                 }
                 return $rows;
 
@@ -126,6 +126,7 @@ class ReportController extends Controller
                     foreach ($n->sales as $s) $rows[] = array_merge($base, ['Sale', $inc[$s->category]['en'] ?? $s->category, $n2($s->amount), '', '', '']);
                     if ($n->qr) $rows[] = array_merge($base, ['Payment', 'QR / PromptPay', $n2($n->qr), '', '', '']);
                     if ($n->card) $rows[] = array_merge($base, ['Payment', 'Card', $n2($n->card), '', '', '']);
+                    if ($n->grab) $rows[] = array_merge($base, ['Payment', 'Grab', $n2($n->grab), '', '', '']);
                     foreach ($n->expenses as $e) $rows[] = array_merge($base, ['Expense', $exp[$e->category]['en'] ?? $e->category, $n2($e->amount), $paid[$e->paid_from]['en'], $e->note, $e->receipt_path ? 'Yes' : ($e->needs_receipt ? 'No' : '—')]);
                     if ($n->counted !== null) $rows[] = array_merge($base, ['Cash count', 'Counted', $n2($n->counted), '', $n->note, '']);
                 }
